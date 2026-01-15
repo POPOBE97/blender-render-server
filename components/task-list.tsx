@@ -29,6 +29,7 @@ import { ScrollArea } from './ui/scroll-area';
 export function TaskList() {
   const [tasks, setTasks] = useState<RenderTask[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const getBadgeVariant = (status: string) => {
     switch (status) {
@@ -54,8 +55,11 @@ export function TaskList() {
         }
         const data = await response.json();
         setTasks(data);
+        setError(null);
+        setHasLoaded(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+        setHasLoaded(true);
       }
     };
 
@@ -89,6 +93,16 @@ export function TaskList() {
     // Open preview in a new tab
     window.open(`/preview/${taskId}`, '_blank');
   };
+
+  if (!hasLoaded) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-red-500">Loading render tasks...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (error) {
     return (

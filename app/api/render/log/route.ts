@@ -29,7 +29,22 @@ export async function GET(request: Request) {
       for (let i = 0; i < Math.min(5, lines.length); i++) {
         const line = lines[i];
         if (line.startsWith('Args:')) {
-          const args = JSON.parse(line.replace('Args:', '').trim());
+          let args: string[] = [];
+          try {
+            const parsedArgs = JSON.parse(line.replace('Args:', '').trim());
+            if (!Array.isArray(parsedArgs) || !parsedArgs.every((arg) => typeof arg === 'string')) {
+              return NextResponse.json(
+                { error: 'Render arguments must be an array of strings' },
+                { status: 400 }
+              );
+            }
+            args = parsedArgs;
+          } catch {
+            return NextResponse.json(
+              { error: 'Invalid JSON format in render arguments' },
+              { status: 400 }
+            );
+          }
           const startIndex = args.indexOf('-s');
           const endIndex = args.indexOf('-e');
           if (startIndex !== -1 && endIndex !== -1) {
