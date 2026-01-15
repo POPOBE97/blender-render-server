@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Progress } from '@/components/ui/progress';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface RenderProgressProps {
   taskId: string;
@@ -12,6 +13,7 @@ interface LogData {
   currentFrame?: number;
   totalFrames?: number;
   completedFrames?: number;
+  error?: string;
 }
 
 export function RenderProgress({ taskId, onComplete }: RenderProgressProps) {
@@ -22,10 +24,29 @@ export function RenderProgress({ taskId, onComplete }: RenderProgressProps) {
     const fetchLog = async () => {
       try {
         const response = await fetch(`/api/render/log?taskId=${taskId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch log');
+        let data: LogData | null = null;
+        try {
+          data = await response.json();
+        } catch {
+          setError('Failed to parse log response');
+          return;
         }
-        const data = await response.json();
+        if (!response.ok) {
+          const errorMessage =
+            data?.error && typeof data.error === 'string' ? data.error : 'Failed to fetch log';
+          setError(errorMessage);
+          return;
+        }
+        if (!data) {
+          setError('Failed to parse log response');
+          return;
+        }
+        const errorMessage = data?.error && typeof data.error === 'string' ? data.error : null;
+        if (errorMessage) {
+          setError(errorMessage);
+          return;
+        }
+        setError(null);
         setLogData(data);
 
         // If progress is 100%, call onComplete
@@ -42,6 +63,16 @@ export function RenderProgress({ taskId, onComplete }: RenderProgressProps) {
     return () => clearInterval(interval);
   }, [taskId, onComplete]);
 
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-red-500">{error}</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className='flex flex-row items-center gap-2'>
@@ -50,10 +81,6 @@ export function RenderProgress({ taskId, onComplete }: RenderProgressProps) {
           {logData.completedFrames ?? 0}/{logData.totalFrames ?? 0} frames
         </span>
       </div>
-
-      {error && (
-        <div className="text-sm text-red-500">{error}</div>
-      )}
     </div>
   );
 }
